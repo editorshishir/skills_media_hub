@@ -314,7 +314,8 @@ const SITE = {
   whatsapp: "https://wa.link/gw7a0t",   // a WhatsApp link, or just the number with country code. Leave "" to hide.
   linkedin: "https://bd.linkedin.com/in/mujahidul-islam-sisher-0748a51a5",   // leave "" to hide
   fiverr:   "https://www.fiverr.com/shishir_editor",   // leave "" to hide
-  showreel: "https://youtu.be/AVPD_utr40I",   // video link (see below)
+  showreel: "https://player.vimeo.com/video/1234876302?h=b0be5793cc",   // video link (see below)
+  showreelPoster: "https://i.vimeocdn.com/video/2210978778-078fc900d97c0352697b861126face2e5508156f858c0b792f6f2e84b503f1d7-d_1280?region=us",   // thumbnail image for the showreel
 
   // Your real rating, e.g. from your Fiverr profile. Leave "" to hide the stars.
   rating:      "4.9",   // e.g. "4.9"
@@ -328,6 +329,7 @@ const SITE = {
    - a Google Drive share link   https://drive.google.com/file/d/XXXX/view   (sharing must be "Anyone with the link")
    - a direct video file link    https://your-storage.com/video.mp4          (Cloudflare R2, Bunny, or a file in this folder like "videos/ad.mp4")
    - a YouTube link or ID        https://youtu.be/XXXXXXXXXXX
+   - a Vimeo link                https://vimeo.com/123456789  (or the player link from Vimeo's embed code)
    Optional: add  poster: "image-link.jpg"  to set your own thumbnail. */
 
 // 16:9 videos (YouTube long-form, podcasts, ads)
@@ -609,6 +611,10 @@ const BRAND_ICONS = {
     src = (src || "").trim();
     if (!src) return null;
     let m;
+    if (/vimeo\.com/.test(src)) {
+      m = src.match(/vimeo\.com\/(?:video\/)?(\d+)(?:\/([0-9a-f]+)|\?h=([0-9a-f]+))?/);
+      return m ? { type: "vimeo", id: m[1], h: m[2] || m[3] || "" } : null;
+    }
     if (/drive\.google\.com/.test(src)) {
       m = src.match(/\/d\/([\w-]+)/) || src.match(/[?&]id=([\w-]+)/);
       return m ? { type: "drive", id: m[1] } : null;
@@ -632,6 +638,12 @@ const BRAND_ICONS = {
       (s.type === "yt" ? "https://i.ytimg.com/vi/" + s.id + (big ? "/maxresdefault.jpg" : "/hqdefault.jpg") :
        s.type === "drive" ? "https://drive.google.com/thumbnail?id=" + s.id + "&sz=w1280" : "");
     if (poster) b.style.backgroundImage = 'url("' + poster + '")';
+    else if (s.type === "vimeo") {            // no thumbnail given: ask Vimeo for one
+      fetch("https://vimeo.com/api/oembed.json?width=1280&url=" + encodeURIComponent("https://vimeo.com/" + s.id + (s.h ? "/" + s.h : "")))
+        .then((r) => r.json())
+        .then((d) => { if (d.thumbnail_url) b.style.backgroundImage = 'url("' + d.thumbnail_url + '")'; })
+        .catch(() => {});
+    }
     else if (s.type === "file") {            // no thumbnail given: show the video's own first frame
       const pv = el("video");
       pv.src = s.url + "#t=0.5"; pv.muted = true; pv.playsInline = true; pv.preload = "metadata";
@@ -655,6 +667,8 @@ const BRAND_ICONS = {
         player = el("iframe");
         player.src = s.type === "yt"
           ? "https://www.youtube-nocookie.com/embed/" + s.id + "?autoplay=1&rel=0"
+          : s.type === "vimeo"
+          ? "https://player.vimeo.com/video/" + s.id + "?autoplay=1" + (s.h ? "&h=" + s.h : "")
           : "https://drive.google.com/file/d/" + s.id + "/preview";
         player.title = v.title || "Video";
         player.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
