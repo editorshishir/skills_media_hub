@@ -105,8 +105,18 @@
   .grid-wide { grid-template-columns: repeat(3, 1fr); }
   .grid-tall { grid-template-columns: repeat(4, 1fr); }
   .work-label { font-size: 1.25rem; color: var(--muted); font-weight: 500; letter-spacing: -0.01em; margin: 0 0 16px; }
-  .grid + .work-label, .more + .work-label { margin-top: clamp(40px, 5vw, 64px); }
+  .grid + .work-label, .more + .work-label, .grid-ugc + .work-label { margin-top: clamp(40px, 5vw, 64px); }
   .more { display: flex; margin: 22px auto 0; }
+  .grid-ugc { grid-template-columns: repeat(4, 1fr); }
+  .grid-ugc .more-tile { grid-column: span 2; }
+  .grid-ugc .tile { aspect-ratio: 9 / 16; }
+  .more-tile { display: grid; place-content: center; gap: 6px; text-align: center; border: 1px dashed var(--line); border-radius: 12px; color: var(--text); font-family: var(--display); font-weight: 600; font-size: 1.25rem; transition: border-color .2s, background .2s; }
+  .more-tile small { color: var(--muted); font-family: var(--body); font-weight: 400; font-size: 0.9rem; }
+  .more-tile:hover { border-color: var(--amber); background: var(--panel); }
+  @media (max-width: 860px) {
+    .grid-ugc { grid-template-columns: repeat(2, 1fr); }
+    .more-tile { grid-column: 1 / -1; padding: 16px; font-size: 1.05rem; }
+  }
   .tile {
     position: relative; display: block; width: 100%; text-align: left;
     border-radius: 12px; overflow: hidden;
@@ -382,6 +392,28 @@ const TALL_VIDEOS = [
     poster: "https://res.cloudinary.com/dibe13aaa/video/upload/so_1,w_540,q_auto/v1745090361/288-Contact_rarptc.jpg" },
 ];
 
+// AI UGC ads (9:16)
+const UGC_VIDEOS = [
+  { src: "https://res.cloudinary.com/drbwhw0rh/video/upload/v1791799763/PLUMO_UGC_ad_vxkpy3.mp4",
+    title: "Plumo", kind: "AI UGC ad",
+    poster: "https://res.cloudinary.com/drbwhw0rh/video/upload/so_1,w_540,q_auto/v1791799763/PLUMO_UGC_ad_vxkpy3.jpg" },
+  { src: "https://res.cloudinary.com/drbwhw0rh/video/upload/v1791799759/HYDRA_UGC_ad_jd11xy.mp4",
+    title: "Hydra", kind: "AI UGC ad",
+    poster: "https://res.cloudinary.com/drbwhw0rh/video/upload/so_1,w_540,q_auto/v1791799759/HYDRA_UGC_ad_jd11xy.jpg" },
+  { src: "https://res.cloudinary.com/drbwhw0rh/video/upload/v1791799753/FIZZI_UGC_ad_xcrgfi.mp4",
+    title: "Fizzi", kind: "AI UGC ad",
+    poster: "https://res.cloudinary.com/drbwhw0rh/video/upload/so_1,w_540,q_auto/v1791799753/FIZZI_UGC_ad_xcrgfi.jpg" },
+  { src: "https://res.cloudinary.com/drbwhw0rh/video/upload/v1791799741/DEWLY_UGC_ad_ppafdy.mp4",
+    title: "Dewly", kind: "AI UGC ad",
+    poster: "https://res.cloudinary.com/drbwhw0rh/video/upload/so_1,w_540,q_auto/v1791799741/DEWLY_UGC_ad_ppafdy.jpg" },
+  { src: "https://res.cloudinary.com/drbwhw0rh/video/upload/v1791799739/CLEARDAY_UGC_ad_ycd7pk.mp4",
+    title: "Clearday", kind: "AI UGC ad",
+    poster: "https://res.cloudinary.com/drbwhw0rh/video/upload/so_1,w_540,q_auto/v1791799739/CLEARDAY_UGC_ad_ycd7pk.jpg" },
+  { src: "https://res.cloudinary.com/drbwhw0rh/video/upload/v1791799738/Arch_Ad_Final_lo2lki.mp4",
+    title: "Arch", kind: "AI UGC ad",
+    poster: "https://res.cloudinary.com/drbwhw0rh/video/upload/so_1,w_540,q_auto/v1791799738/Arch_Ad_Final_lo2lki.jpg" },
+];
+
 // Brands you have worked with. They slide across the page on their own.
 // "site" is the brand's website. Icons for these nine are saved inside this file; a new brand's icon loads from the web.
 // To use your own logo image instead, put its link or file name in "logo".
@@ -477,6 +509,8 @@ const BRAND_ICONS = {
     <div class="grid grid-wide" id="wide"></div>
     <h3 class="work-label">Short-form</h3>
     <div class="grid grid-tall" id="tall"></div>
+    <h3 class="work-label">AI UGC ads</h3>
+    <div class="grid grid-ugc" id="ugc"></div>
   </div>
 </section>
 
@@ -691,15 +725,11 @@ const BRAND_ICONS = {
     videoTile({ src: SITE.showreel, poster: SITE.showreelPoster }, "reel", true) ||
     emptySlot("reel", "Your showreel goes here", "Paste a video link in SITE.showreel")
   );
-  // show the first few videos; a "Show more" button reveals the rest
-  const fill = (target, list, first) => {
-    const extra = [];
-    list.forEach((v, i) => {
-      const t = videoTile(v, "tile") || emptySlot("tile", "Your video here", "Paste a video link");
-      if (i >= first) { t.hidden = true; extra.push(t); }
-      target.appendChild(t);
-    });
-    if (!extra.length) return;
+  // keep the first few items of a list visible; a "Show more" button reveals the rest
+  function collapse(items, first, after) {
+    const extra = items.slice(first);
+    if (!extra.length) return null;
+    extra.forEach((t) => (t.hidden = true));
     const more = el("button", "btn btn-line more", "Show more");
     more.type = "button";
     more.setAttribute("aria-expanded", "false");
@@ -708,13 +738,39 @@ const BRAND_ICONS = {
       extra.forEach((t) => (t.hidden = !open));
       more.setAttribute("aria-expanded", String(open));
       more.textContent = open ? "Show less" : "Show more";
-      if (!open) target.scrollIntoView({ block: "nearest" });
+      if (!open) after.scrollIntoView({ block: "nearest" });
       size();
     });
-    target.after(more);
+    after.after(more);
+    return more;
+  }
+  const makeTiles = (target, list) => list.map((v) => {
+    const t = videoTile(v, "tile") || emptySlot("tile", "Your video here", "Paste a video link");
+    target.appendChild(t);
+    return t;
+  });
+  const fill = (target, list, first) => collapse(makeTiles(target, list), first, target);
+
+  // AI UGC: two videos, then a tile in the same row that opens the rest
+  const fillWithTile = (target, list, first) => {
+    const tiles = makeTiles(target, list);
+    const extra = tiles.slice(first);
+    if (!extra.length) return;
+    extra.forEach((t) => (t.hidden = true));
+    const tile = el("button", "more-tile");
+    tile.type = "button";
+    tile.append("Show " + extra.length + " more");
+    tile.appendChild(el("small", "", "AI UGC ads"));
+    tile.addEventListener("click", () => { extra.forEach((t) => (t.hidden = false)); tile.remove(); size(); extra[0].focus(); });
+    target.insertBefore(tile, extra[0]);
   };
+
   fill($("#wide"), WIDE_VIDEOS, 3);   // how many long-form videos show before "Show more"
   fill($("#tall"), TALL_VIDEOS, 4);   // how many short-form videos show before "Show more"
+  fillWithTile($("#ugc"), UGC_VIDEOS, 2);   // how many AI UGC videos show first
+
+  // services and reviews also open with "Show more"
+  collapse([...document.querySelectorAll("#services .service")], 6, $("#services .services"));
 
   /* --- brands: two copies of the row slide left in a loop --- */
   const brandSet = () => {
@@ -788,6 +844,8 @@ const BRAND_ICONS = {
     fig.appendChild(cap);
     quotes.appendChild(fig);
   });
+
+  collapse([...document.querySelectorAll("#quotes .quote")], 3, $("#quotes"));
 
   /* --- contact buttons --- */
   const actions = $("#contactActions");
