@@ -324,6 +324,7 @@ const SITE = {
   whatsapp: "https://wa.link/gw7a0t",   // a WhatsApp link, or just the number with country code. Leave "" to hide.
   linkedin: "https://bd.linkedin.com/in/mujahidul-islam-sisher-0748a51a5",   // leave "" to hide
   fiverr:   "https://www.fiverr.com/shishir_editor",   // leave "" to hide
+  upwork:   "https://www.upwork.com/freelancers/mujahidulislamsisher",   // leave "" to hide
   showreel: "https://player.vimeo.com/video/1234876302?h=b0be5793cc",   // video link (see below)
   showreelPoster: "https://i.vimeocdn.com/video/2210978778-078fc900d97c0352697b861126face2e5508156f858c0b792f6f2e84b503f1d7-d_1280?region=us",   // thumbnail image for the showreel
 
@@ -861,6 +862,7 @@ const BRAND_ICONS = {
   if (SITE.email)    add("Send an email", "mailto:" + SITE.email);
   if (SITE.linkedin) add("LinkedIn", SITE.linkedin);
   if (SITE.fiverr)   add("Hire on Fiverr", SITE.fiverr);
+  if (SITE.upwork)   add("Hire on Upwork", SITE.upwork);
   if (SITE.email) {
     const m = $("#contactMail");
     m.append("Or write to ");
